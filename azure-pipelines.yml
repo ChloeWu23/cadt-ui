@@ -1,36 +1,5 @@
-#  Docker
-# Build a Docker image
-# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
-
 trigger:
   - docker
-
-
-resources:
-  repositories:
-    - repository: frontend
-      type: git
-      name: "clearly-saas/sandbox"
-      ref: develop
-    - repository: smoketest
-      type: git
-      name: "clearly-saas/micro_test_smoke"
-      ref: develop
-    - repository: Helmchart
-      type: git
-      name: "clearly-saas/golden_configuration"
-      ref: develop
-    
-    - repository: rbactest
-      type: git
-      name: "clearly-saas/micro_test_rbac"
-      ref: develop
-
-variables:
-  developBranchName: "develop"
-  mainBranchName: "main"
-  featureBranchName: "feature"
-
 stages:
   - stage: Builddev
     displayName: Build Dev image
@@ -40,37 +9,7 @@ stages:
         displayName: Build-dev
         pool:
           vmImage: ubuntu-latest
-
-        steps:
-          - checkout: self
-
-          - task: DownloadSecureFile@1
-            inputs:
-              secureFile: 'setEnvVars.js'
-          
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                pwd
-                cd .jest
-                ls
-
-          - task: CopyFiles@2
-            inputs:
-              SourceFolder: '$(Agent.TempDirectory)'
-              Contents: 'setEnvVars.js'
-              TargetFolder: '$(Build.SourcesDirectory)/.jest'
-          
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                cd .jest
-                ls
-                pwd
-              
-          - task: Bash@3
+           - task: Bash@3
             name: "ADO_variables"
             inputs:
               targetType: "inline"
@@ -81,52 +20,14 @@ stages:
                 echo "##vso[task.setvariable variable=code_version_out;isOutput=true]$tagvalue"
                 echo $code_version_out
                 echo $code_version
-
-          - task: SonarCloudPrepare@1
+            - task: Docker@2 # Pushing the Docker Image inside the Container Registry
             inputs:
-              SonarCloud: "Clearly-SonarCloud"
-              organization: "clearly"
-              scannerMode: "CLI"
-              configFile: sonar-project.properties
-            continueOnError: true
-
-          - task: Npm@1
-            inputs:
-              command: "install"
-              workingDir: "$(System.DefaultWorkingDirectory)"
-
-          - task: Npm@1
-            displayName: Build app
-            inputs:
-              command: "custom"
-              customCommand: "run build"
-              workingDir: "$(System.DefaultWorkingDirectory)"
-
-          - task: Npm@1
-            displayName: Test
-            inputs:
-              command: "custom"
-              customCommand: "run test"
-
-          - task: SonarCloudAnalyze@1
-            displayName: "Run Code Analysis"
-            continueOnError: true
-
-          - task: SonarCloudPublish@1
-            displayName: "Publish Quality Gate Results"
-            inputs:
-              pollingTimeoutSec: "300"
-            continueOnError: true
-
-          - task: Docker@2 # Pushing the Docker Image inside the Container Registry
-            inputs:
-              containerRegistry: "clearlyACRdev" # Adding Container Registry Name
-              repository: "app-web-dashboard-develop" # Giving Name to the Repository
+              containerRegistry: "sandboxcadtACRdev" # Adding Container Registry Name
+              repository: "app-cadt-develop" # Giving Name to the Repository
               command: "buildAndPush"
-              Dockerfile: "$(System.DefaultWorkingDirectory)/Dockerfile-cicd"
+              Dockerfile: "$(System.DefaultWorkingDirectory)/Dockerfile"
               tags: $(code_version)_$(Build.BuildId)
-
-  - stage: Deploydev
+ - stage: Deploydev
     dependsOn: Builddev
     displayName: Deploy Dev Application
     jobs:
@@ -138,298 +39,25 @@ stages:
         displayName: Deploy Application in Cluster
         steps:
           - checkout: Helmchart
-
           - task: Bash@3
             inputs:
               targetType: "inline"
               script: "echo $(code_version_out)"
-
           - task: HelmInstaller@0 # Installing Helm in the Client
             inputs:
               helmVersion: "3.9.0"
               installKubectl: true
-
           - task: HelmDeploy@0 # Deploying the k8s using Helm
             inputs:
-              azureSubscription: "clearly-earth-dev-northeurope-rg-master"
-              azureResourceGroup: "clearly-earth-dev-northeurope-rg-master"
-              kubernetesCluster: "clearly-earth-aks-dev-master"
+              azureSubscription: "sandbox-cadt-dev-northeurope-rg-master"
+              azureResourceGroup: "sandbox-cadt-dev-northeurope-rg-master"
+              kubernetesCluster: "sandbox-cadt-aks-dev-master"
               namespace: "develop"
               command: "upgrade"
               chartType: "FilePath"
               chartPath: "helmcharts/app-web-dashboard-helm"
               chartVersion: "1.0"
-              releaseName: "app-web-dashboard-develop"
-              valueFile: "helmcharts/app-web-dashboard-helm/values.develop.yaml"
+              releaseName: "cadt-ui-develop"
+              valueFile: "helmcharts/cadt-ui/values.develop.yaml"
               waitForExecution: true
               arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
-
-  - stage: SmokeTest
-    dependsOn: Deploydev
-    displayName: Test Develop Deployment
-    jobs:
-    - job: TestSmoke
-      condition: eq(variables['Build.SourceBranchName'],variables['developBranchName'])
-      variables:
-        - name: code_version_out
-          value: $[ stageDependencies.Builddev.Buildjob.outputs['ADO_variables.code_version_out'] ]
-      displayName: Test Application app.dev.clearly.earth
-      steps:
-      - checkout: smoketest
-      
-      - task: DockerCompose@0
-        displayName: Docker Compose
-        inputs:
-          containerregistrytype: 'Azure Container Registry'
-          azureSubscription: 'clearly-earth-dev-northeurope-rg-master'
-          azureContainerRegistry: '{"loginServer":"clearlyacrdev.azurecr.io", "id" : "/subscriptions/6a1f227b-1c08-4e03-943d-1d5491da845c/resourceGroups/clearly-earth-dev-northeurope-rg-master/providers/Microsoft.ContainerRegistry/registries/clearlyACRdev"}'
-          dockerComposeFile: '$(System.DefaultWorkingDirectory)/docker-compose.yml'
-          action: 'Run a Docker Compose command'
-          dockerComposeCommand: 'up'
-          arguments: '-d'
-      - task: Bash@3
-        displayName: Install dependencies
-        inputs:
-          targetType: 'inline'
-          script: "cd $(System.DefaultWorkingDirectory) && npm i"
-      
-      - task: Bash@3
-        displayName: Clean previous screenshots
-        inputs:
-           targetType: 'inline'
-           script: "cd $(System.DefaultWorkingDirectory) && npm run test:cleanup"
-
-      - task: Bash@3
-        displayName: Smoke Test Execution
-        inputs:
-          targetType: 'inline'
-          script: "cd $(System.DefaultWorkingDirectory) && npm run test:env_develop"
-
-      - task: PublishTestResults@2
-        condition: succeededOrFailed()
-        displayName: Publish Test Run
-        inputs:
-            testResultsFormat: 'JUnit'
-            testResultsFiles: '**/testResults.xml'
-            searchFolder: '$(System.DefaultWorkingDirectory)/test-output'
-
-      - task: PublishTestResultScreenshot@0
-        condition: succeededOrFailed()
-        displayName: Publish Test Result Screenshot
-        inputs:
-          organization: 'clearly-earth'
-          screenshotFolder: '$(System.DefaultWorkingDirectory)/test-output/screenshots'
-
-      - task: Bash@3
-        condition: succeededOrFailed()
-        displayName: Test Results on Slack
-        inputs:
-           targetType: 'inline'
-           script: "cd $(System.DefaultWorkingDirectory)&& npm run test:result"
-
-      - task: PublishPipelineArtifact@0
-        condition: succeededOrFailed()
-        displayName: 'Execution Screenshots'
-        inputs:
-           artifactName: 'screenshots'
-           targetPath: '$(Build.SourcesDirectory)/test-output/screenshots'
-
-    - job: TestRbac
-      condition: eq(variables['Build.SourceBranchName'],variables['developBranchName'])
-      variables:
-        - name: code_version_out
-          value: $[ stageDependencies.Builddev.Buildjob.outputs['ADO_variables.code_version_out'] ]
-      displayName: Test Application app.dev.clearly.earth
-      steps:
-      - checkout: rbactest
-      
-      - task: DockerCompose@0
-        displayName: Docker Compose
-        inputs:
-          containerregistrytype: 'Azure Container Registry'
-          azureSubscription: 'clearly-earth-dev-northeurope-rg-master'
-          azureContainerRegistry: '{"loginServer":"clearlyacrdev.azurecr.io", "id" : "/subscriptions/6a1f227b-1c08-4e03-943d-1d5491da845c/resourceGroups/clearly-earth-dev-northeurope-rg-master/providers/Microsoft.ContainerRegistry/registries/clearlyACRdev"}'
-          dockerComposeFile: '$(System.DefaultWorkingDirectory)/docker-compose.yml'
-          action: 'Run a Docker Compose command'
-          dockerComposeCommand: 'up'
-          arguments: '-d'
-      - task: Bash@3
-        displayName: Install dependencies
-        inputs:
-          targetType: 'inline'
-          script: "cd $(System.DefaultWorkingDirectory) && npm i"
-      
-      - task: Bash@3
-        displayName: Clean previous screenshots
-        inputs:
-           targetType: 'inline'
-           script: "cd $(System.DefaultWorkingDirectory) && npm run test:cleanup"
-
-      - task: Bash@3
-        displayName: Rbac Test Execution
-        inputs:
-          targetType: 'inline'
-          script: "cd $(System.DefaultWorkingDirectory) && npm run test:env_develop"
-
-      - task: PublishTestResults@2
-        condition: succeededOrFailed()
-        displayName: Publish Test Run
-        inputs:
-            testResultsFormat: 'JUnit'
-            testResultsFiles: '**/testResults.xml'
-            searchFolder: '$(System.DefaultWorkingDirectory)/test-output'
-
-      - task: PublishTestResultScreenshot@0
-        condition: succeededOrFailed()
-        displayName: Publish Test Result Screenshot
-        inputs:
-          organization: 'clearly-earth'
-          screenshotFolder: '$(System.DefaultWorkingDirectory)/test-output/screenshots'
-
-      - task: Bash@3
-        condition: succeededOrFailed()
-        displayName: Test Results on Slack
-        inputs:
-           targetType: 'inline'
-           script: "cd $(System.DefaultWorkingDirectory)&& npm run test:result"
-
-      - task: PublishPipelineArtifact@0
-        condition: succeededOrFailed()
-        displayName: 'Execution Screenshots'
-        inputs:
-           artifactName: 'screenshots'
-           targetPath: '$(Build.SourcesDirectory)/test-output/screenshots'
-
-
-  - stage: Buildmain
-    displayName: Build main image
-    jobs:
-      - job: Buildjob
-        condition: eq(variables['Build.SourceBranchName'],variables['mainBranchName'])
-        displayName: Build-main
-        pool:
-          vmImage: ubuntu-latest
-        steps:
-
-          - task: DownloadSecureFile@1
-            inputs:
-              secureFile: 'setEnvVars.js'
-          
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                pwd
-                cd .jest
-                ls
-
-          - task: CopyFiles@2
-            inputs:
-              SourceFolder: '$(Agent.TempDirectory)'
-              Contents: 'setEnvVars.js'
-              TargetFolder: '$(Build.SourcesDirectory)/.jest'
-          
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                cd .jest
-                ls
-                pwd
-                
-          - task: Bash@3
-            name: "ADO_variables"
-            inputs:
-              targetType: "inline"
-              script: |
-                tagvalue="$(sed 's/.*"version": "\(.*\)".*/\1/;t;d' ./package.json)"
-                echo "Setting variable code_version"
-                echo "##vso[task.setvariable variable=code_version]$tagvalue"
-                echo "##vso[task.setvariable variable=code_version_out;isOutput=true]$tagvalue"
-                echo $code_version_out
-                echo $code_version
-
-          - task: SonarCloudPrepare@1
-            inputs:
-              SonarCloud: "Clearly-SonarCloud"
-              organization: "clearly"
-              scannerMode: "CLI"
-              configFile: sonar-project.properties
-
-          - task: Npm@1
-            inputs:
-              command: "install"
-
-          - task: Npm@1
-            displayName: Build app
-            inputs:
-              command: "custom"
-              customCommand: "run build"
-
-          - task: SonarCloudAnalyze@1
-            displayName: "Run Code Analysis"
-            continueOnError: true
-
-          - task: SonarCloudPublish@1
-            displayName: "Publish Quality Gate Results"
-            inputs:
-              pollingTimeoutSec: "300"
-            continueOnError: true
-
-          - task: Docker@2
-            displayName: Build an image
-            inputs:
-              command: build
-              dockerfile: "$(Build.SourcesDirectory)/Dockerfile-cicd"
-          - task: Docker@2 # Pushing the Docker Image inside the Container Registry
-            inputs:
-              containerRegistry: "clearlyACRmain" # Adding Container Registry Name
-              repository: "app-web-dashboard" # Giving Name to the Repository
-              command: "buildAndPush"
-              Dockerfile: "**/Dockerfile-cicd"
-              tags: $(code_version)_$(Build.BuildId)
-
-          - task: PublishPipelineArtifact@1
-            inputs:
-              targetPath: "$(Pipeline.Workspace)"
-              artifact: "app-web-dashboard-artifact"
-              publishLocation: "pipeline"
-
-          - task: PublishBuildArtifacts@1
-            inputs:
-              PathtoPublish: "$(Build.ArtifactStagingDirectory)"
-              ArtifactName: "PublishbuildArtifact"
-              publishLocation: "Container"
-
-  - stage: RollbackDev
-    dependsOn: 
-    - SmokeTest
-    condition: failed('SmokeTest')
-    displayName: Rollback Dev Deployment
-    jobs:
-    - job: Rollback
-      condition: ne(stageDependencies.SmokeTest.result, 'Succeeded')
-      variables:
-        - name: code_version_out
-          value: $[ stageDependencies.Builddev.Buildjob.outputs['ADO_variables.code_version_out'] ]
-      displayName: Rollback Dev Deployment
-      steps:
-      - task: Bash@3
-        inputs:
-          targetType: 'inline'
-          script: 'echo $(code_version_out)'
-
-      - task: HelmInstaller@0  # Installing Helm in the Client
-        inputs:
-         helmVersion: '3.9.0'
-         installKubectl: true
-
-      - task: HelmDeploy@0 # Deploying the k8s using Helm
-        inputs:
-          connectionType: 'Azure Resource Manager'
-          azureSubscription: 'clearly-earth-dev-northeurope-rg-master'
-          azureResourceGroup: 'clearly-earth-dev-northeurope-rg-master'
-          kubernetesCluster: 'clearly-earth-aks-dev-master'
-          namespace: 'develop'
-          command: 'rollback'
-          arguments: 'app-web-dashboard-develop'
