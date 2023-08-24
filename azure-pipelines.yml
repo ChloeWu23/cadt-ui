@@ -5,7 +5,7 @@ stages:
     displayName: Build Dev image
     jobs:
       - job: Buildjob
-        condition: eq(variables['Build.SourceBranchName'],variables['developBranchName'])
+        #condition: eq(variables['Build.SourceBranchName'],variables['dockerBranchName'])
         displayName: Build-dev
         pool:
           vmImage: ubuntu-latest
