@@ -55,7 +55,7 @@ stages:
                 azureResourceGroup: "sandbox-cadt-dev-northeurope-rg-master"
                 kubernetesCluster: "sandbox-cadt-aks-dev-master"
                 namespace: "develop"
-                command: "upgrade"
+                command: "install"
                 chartType: "FilePath"
                 chartPath: "cadt-ui"
                 chartVersion: "1.0"
@@ -64,3 +64,4 @@ stages:
                 waitForExecution: true
                 arguments: --install
                 # arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
+            
