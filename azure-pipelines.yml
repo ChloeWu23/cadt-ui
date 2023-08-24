@@ -20,7 +20,8 @@ stages:
           #       echo "##vso[task.setvariable variable=code_version_out;isOutput=true]$tagvalue"
           #       echo $code_version_out
           #       echo $code_version
-
+        steps:
+        
             - task: Docker@2 # Pushing the Docker Image inside the Container Registry
               inputs:
                 containerRegistry: "sandboxcadtACRdev" # Adding Container Registry Name
