@@ -13,7 +13,7 @@ image:
   name: app-cadt-develop #imagename
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.6.1_1985"
+  tag: "1.0.0"
 
 imagePullSecrets: []
 nameOverride: ""

@@ -57,10 +57,10 @@ stages:
                 namespace: "develop"
                 command: "upgrade"
                 chartType: "FilePath"
-                chartPath: "/cadt-ui"
+                chartPath: "cadt-ui"
                 chartVersion: "1.0"
                 releaseName: "cadt-ui-develop"
-                valueFile: "/cadt-ui/values.yaml"
+                valueFile: "cadt-ui/values.yaml"
                 waitForExecution: true
                 arguments: --install
                 # arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
