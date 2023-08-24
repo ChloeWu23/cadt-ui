@@ -10,7 +10,7 @@ replicaCount: 1
 #here? what value to put
 image:
   registry: sandboxcadtACRdev.azurecr.io
-  name: app-cadt-ui-develop #imagename
+  name: app-cadt-develop #imagename
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.6.1_1985"
@@ -43,7 +43,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 3300 #check
+  port: 31320 #check
 
 ingress:
   enabled: false
