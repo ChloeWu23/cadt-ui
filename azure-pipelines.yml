@@ -9,7 +9,7 @@ stages:
         displayName: Build-dev
         pool:
           vmImage: ubuntu-latest
-           - task: Bash@3
+          - task: Bash@3
             name: "ADO_variables"
             inputs:
               targetType: "inline"
@@ -21,13 +21,13 @@ stages:
                 echo $code_version_out
                 echo $code_version
             - task: Docker@2 # Pushing the Docker Image inside the Container Registry
-            inputs:
-              containerRegistry: "sandboxcadtACRdev" # Adding Container Registry Name
-              repository: "app-cadt-develop" # Giving Name to the Repository
-              command: "buildAndPush"
-              Dockerfile: "$(System.DefaultWorkingDirectory)/Dockerfile"
-              tags: $(code_version)_$(Build.BuildId)
- - stage: Deploydev
+              inputs:
+                containerRegistry: "sandboxcadtACRdev" # Adding Container Registry Name
+                repository: "app-cadt-develop" # Giving Name to the Repository
+                command: "buildAndPush"
+                Dockerfile: "$(System.DefaultWorkingDirectory)/Dockerfile"
+                tags: $(code_version)_$(Build.BuildId)
+- stage: Deploydev
     dependsOn: Builddev
     displayName: Deploy Dev Application
     jobs:
