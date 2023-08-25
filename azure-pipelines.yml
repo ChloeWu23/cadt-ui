@@ -62,6 +62,6 @@ stages:
                 releaseName: "cadt-ui-develop"
                 valueFile: "cadt-ui/values.yaml"
                 waitForExecution: true
-                arguments: --install
+                # arguments: --install
                 # arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
             
