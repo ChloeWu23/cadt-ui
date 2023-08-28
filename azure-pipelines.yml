@@ -9,42 +9,41 @@ stages:
         displayName: Build-dev
         pool:
           vmImage: ubuntu-latest
-          # - task: Bash@3
-          #   name: "ADO_variables"
-          #   inputs:
-          #     targetType: "inline"
-          #     script: |
-          #       tagvalue="$(sed 's/.*"version": "\(.*\)".*/\1/;t;d' ./package.json)"
-          #       echo "Setting variable code_version"
-          #       echo "##vso[task.setvariable variable=code_version]$tagvalue"
-          #       echo "##vso[task.setvariable variable=code_version_out;isOutput=true]$tagvalue"
-          #       echo $code_version_out
-          #       echo $code_version
         steps:
-        
+            - task: Bash@3
+              name: "ADO_variables"
+              inputs:
+                targetType: "inline"
+                script: |
+                    tagvalue="$(sed 's/.*"version": "\(.*\)".*/\1/;t;d' ./package.json)"
+                    echo "Setting variable code_version"
+                    echo "##vso[task.setvariable variable=code_version]$tagvalue"
+                    echo "##vso[task.setvariable variable=code_version_out;isOutput=true]$tagvalue"
+                    echo $code_version_out
+                    echo $code_version
             - task: Docker@2 # Pushing the Docker Image inside the Container Registry
               inputs:
                 containerRegistry: "sandboxcadtACRdev" # Adding Container Registry Name
                 repository: "app-cadt-develop" # Giving Name to the Repository
                 command: "buildAndPush"
                 Dockerfile: "$(System.DefaultWorkingDirectory)/Dockerfile"
-                tags: 1.0.0
+                tags:  $(code_version)_$(Build.BuildId)
 
   - stage: Deploydev
     displayName: Deploy Dev Application
     jobs:
         - job: Deploy
           # condition: eq(variables['Build.SourceBranchName'],variables['developBranchName'])
-          # variables:
-          #   - name: code_version_out
+          variables:
+            - name: code_version_out
           #     value: $[ stageDependencies.Builddev.Buildjob.outputs['ADO_variables.code_version_out'] ]
           displayName: Deploy Application in Cluster
           steps:
             # - checkout: Helmchart
-            # - task: Bash@3
-            #   inputs:
-            #     targetType: "inline"
-            #     script: "echo $(code_version_out)"
+            - task: Bash@3
+              inputs:
+                targetType: "inline"
+                script: "echo $(code_version_out)"
             - task: HelmInstaller@0 # Installing Helm in the Client
               inputs:
                 helmVersion: "3.9.0"
@@ -63,5 +62,5 @@ stages:
                 valueFile: "cadt-ui/values.yaml"
                 waitForExecution: true
                 # arguments: --install
-                # arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
+                arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
             
