@@ -43,7 +43,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 31320 #check
+  port: 31311 #check
 
 ingress:
   enabled: false
