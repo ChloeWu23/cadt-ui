@@ -5,7 +5,7 @@ FROM node:16.0.0
 WORKDIR /usr/src/app
 
 # Set environment variables
-ENV PORT=31320
+ENV PORT=31321
 
 # Copy package.json and package-lock.json
 COPY package*.json ./
