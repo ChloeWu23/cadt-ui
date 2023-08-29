@@ -43,7 +43,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 31311 #check
+  port: 3001  # this should match the port your application listens on, which is 3001 as per your Dockerfile
 
 ingress:
   enabled: false
