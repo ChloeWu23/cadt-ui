@@ -43,7 +43,7 @@ securityContext: {}
 
 service:
   type: LoadBalancer
-  port: 31320 #check
+  port: 31320  # this should match the port your application listens on, which is 3001 as per your Dockerfile
 
 ingress:
   enabled: true
