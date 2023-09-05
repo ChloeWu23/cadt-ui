@@ -28,10 +28,5 @@ RUN npm install
 # Additional global installations
 RUN npm install -g react-scripts foreman husky prettier lint-staged git-authors-cli
 
-
-# Expose the calculated port
-#EXPOSE 3001
-
 # Run npm start for development. For production, you can use CMD ["npm", "run", "build"]
 CMD ["npm", "start"]
-
