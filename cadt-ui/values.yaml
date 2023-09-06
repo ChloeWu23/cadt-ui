@@ -95,3 +95,12 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+env:
+  REACT_APP_API_HOST: "http://cadt-api-instance1-cadt-backend-helm:31310"
+
+# Add these lines to declare the name of Kubernetes secrets
+#apiKey_secret_name: my-secrets
+#apiKey_secret_key: apiKey
+#serverAddress_secret_name: my-secrets
+#serverAddress_secret_key: serverAddress

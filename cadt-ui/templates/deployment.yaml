@@ -34,11 +34,26 @@ spec:
            #need to update here: Values.image.registry refers to ui docker image
           image: {{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: REACT_APP_API_HOST
+              value: {{ .Values.env.REACT_APP_API_HOST | quote }}
+          #env:
+            #- name: API_KEY
+              #valueFrom:
+                #secretKeyRef:
+                #name: {{ .Values.apiKey_secret_name }}
+                #key: {{ .Values.apiKey_secret_key }}
+            #- name: SERVER_ADDRESS
+              #valueFrom:
+                #secretKeyRef:
+                #name: {{ .Values.serverAddress_secret_name }}
+                #key: {{ .Values.serverAddress_secret_key }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
               #containerPort: 3001
               protocol: TCP
+              
           # livenessProbe:
           #   httpGet:
           #     path: /
@@ -61,3 +76,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+

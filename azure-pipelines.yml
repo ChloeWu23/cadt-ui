@@ -1,5 +1,8 @@
 trigger:
   - docker
+variables:
+  - group: 'cadt-config' # Replace this with the name of your variable group where your API key is stored.
+
 stages:
   - stage: Builddev
     displayName: Build Dev image
@@ -49,6 +52,7 @@ stages:
                 script: |
                   echo "Full tag is: $(code_version_out)_$(Build.BuildId)"
                   echo $(code_version_out)
+                  
             - task: HelmInstaller@0 # Installing Helm in the Client
               inputs:
                 helmVersion: "3.9.0"
@@ -60,6 +64,7 @@ stages:
                 kubernetesCluster: "sandbox-cadt-aks-dev-master"
                 namespace: "develop"
                 command: "upgrade"
+                install: true  # makes it 'helm upgrade --install'
                 chartType: "FilePath"
                 chartPath: "cadt-ui"
                 chartVersion: "1.0"
@@ -67,5 +72,10 @@ stages:
                 valueFile: "cadt-ui/values.yaml"
                 waitForExecution: true
                 # arguments: --install
-                arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
+                arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId) --set apiKey=$(apiKey)"
+
+                #arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId)"
+                #arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId) --set apiKey=$(apiKey) --set env.REACT_APP_API_HOST=http://cadt-api-instance1-cadt-backend-helm:31310"
+                #arguments: "--set image.tag=$(code_version_out)_$(Build.BuildId) --set api_key_secret_name=my-secrets --set apiKey_secret_key=apiKey --set serverAddress_secret_name=my-secrets --set serverAddress_secret_key=serverAddress"
+
             
