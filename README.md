@@ -1,8 +1,12 @@
-# Climate Warehouse Auxillery App
+# CADT_UI in Sandbox Enviroment
 
-Auxillery App for the Climate Warehouse
+Deploy cadt-ui in Kubernete Cluster with `DockerFile` and Helm Chart
 
-## Quickstart
+## Helm Chart
+Under cadt-ui folder
+
+
+## CADT-UI Indroduce
 
 ### Installation
 
